@@ -1,6 +1,8 @@
 #pragma once
 // SynTHBloK GRAIN-FORGE: the module and its panel parts, shared with MATRIX FORGE (which builds on this module).
+#include "BoldFont.hpp"   // FONTS Nov 26
 #include "plugin.hpp"
+#include "OledUi.hpp"   // (BLOX THEMES: MTX parts themed)
 #include "SynTHBloKGrainForge_dsp.hpp"
 #include "KnobTicks.hpp"
 #include <atomic>
@@ -35,7 +37,7 @@ static const GFPreset kPreset[] = {
                      {1, .55f, .35f, 0, .5f, .6f, 0, .35f}, {1, 8, .4f, 0, .3f, .6f, .6f}, .45f},
     {"DUB ECHO",     {0, 0, .2f, 0, 0, 2, 1},     {1, .1f, 1, .1f, .25f, 0, .6f}, {0, 12, 1, .5f, 0, .5f, .2f},
                      {1, .45f, .3f, 2, .4f, .5f, 0, .4f},   {1, 8, .6f, 0, .2f, .35f, .75f}, .5f},
-    {"DAFT VOCODER", {0, 0, .2f, 0, 0, 2, 1},     {1, .15f, 3, 0, 0, 0, .5f},     {1, 15, 5, .4f, .05f, .6f, .85f},
+    {"RETRO FORMANT", {0, 0, .2f, 0, 0, 2, 1},    {1, .15f, 3, 0, 0, 0, .5f},     {1, 15, 5, .4f, .05f, .6f, .85f},   // (was DAFT VOCODER: no artist names; Gemini's name, Nov 16 2026)
                      {1, .6f, .3f, 1, .35f, .4f, 0, .4f},   {1, 6, .3f, 0, .5f, .6f, .35f}, .7f},
     {"TRANCE GATE",  {0, 0, .2f, 0, 0, 2, 1},     {0, .1f, 3, 0, 0, 0, .5f},      {0, 12, 3, .5f, 0, .5f, .2f},
                      {1, .7f, .45f, 3, .75f, 1, 0, .25f},   {1, 8, .45f, 0, .3f, .6f, .4f}, .8f},
@@ -49,6 +51,17 @@ static const GFPreset kPreset[] = {
                      {0, .55f, .35f, 0, .5f, .6f, 0, .35f}, {1, 10, .6f, 12, .3f, .75f, .6f}, .5f},
     {"ROBO DUB",     {0, 0, .2f, 0, 0, 2, 1},     {0, .1f, 3, 0, 0, 0, .5f},      {1, 7, 3, .3f, .1f, .6f, .4f},
                      {1, .5f, .5f, 4, .5f, .6f, 1, .4f},    {1, 8, .55f, 7, .5f, .5f, .6f}, .6f},
+    // ROLE PRESETS (Nov 16 2026, FORGE FX review: claude/sessions/2026-11-16_fx-review-compare.md): light starting points
+    // for a part in a mix on MTX-DRUM / MTX-DUO / MATRIX FORGE. Values from Copilot; Claude took SHUFFLE / GLITCH off on
+    // BASS and PADS (Copilot's own advice: ROLL / STOP break held notes, octave shuffle shakes the low end).
+    {"DRUM BUS",     {1, 0, .12f, .04f, 0, 2, .28f}, {1, .08f, 4, .1f, .04f, .06f, .24f}, {0, 12, 3, .5f, .03f, .45f, 0},
+                     {1, .64f, .28f, 0, .16f, .24f, 0, .24f}, {1, 8, .24f, 0, .06f, .5f, .22f}, .24f},
+    {"BASS",         {0, 0, .06f, .02f, 0, 2, .14f}, {0, .03f, 3, .05f, .02f, .02f, .1f}, {1, 12, 1, .42f, .02f, .38f, .16f},
+                     {1, .42f, .22f, 1, .12f, .18f, 0, .44f}, {1, 6, .18f, 0, .05f, .3f, .16f}, .2f},
+    {"LEAD",         {1, 2, .14f, .08f, .04f, 1, .3f}, {1, .08f, 4, .14f, .06f, .06f, .24f}, {1, 12, 3, .62f, .08f, .58f, .34f},
+                     {1, .64f, .36f, 5, .26f, .34f, 1, .34f}, {1, 8, .38f, 7, .22f, .58f, .42f}, .42f},
+    {"PADS",         {0, 4, .1f, .12f, .06f, 2, .24f}, {0, .05f, 2, .12f, .1f, .04f, .16f}, {1, 12, 6, .72f, .03f, .52f, .24f},
+                     {1, .48f, .3f, 4, .18f, .24f, 0, .72f}, {1, 10, .48f, 12, .28f, .36f, .52f}, .46f},
 };
 static const int kPresetCount = sizeof(kPreset) / sizeof(kPreset[0]);   // index kPresetCount = SMART RANDOM
 
@@ -628,13 +641,18 @@ static std::shared_ptr<window::Font> uiFont() { return APP->window->uiFont; }
 struct GFLabel : TransparentWidget {
     std::string text;
     float size = 7.f;
+    bool header = false;   // FONTS Nov 26: section header 1.22x bold #ececec (false = unchanged look)
     void draw(const DrawArgs& args) override {
         auto font = uiFont(); if (!font) return;
         nvgFontFaceId(args.vg, font->handle);
         nvgFontSize(args.vg, size);
         nvgTextLetterSpacing(args.vg, 0.6f);
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgFillColor(args.vg, nvgRGB(0xbb, 0xbb, 0xbb));
+        if (header) {   // FONTS Nov 26: real bold, 1.22x, #ececec (src/BoldFont.hpp)
+            drawSectionHeader(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, text.c_str(), size);
+            return;
+        }
+        nvgFillColor(args.vg, oled::tRGB(0xbb, 0xbb, 0xbb));
         nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, text.c_str(), NULL);
     }
 };
@@ -645,11 +663,11 @@ struct GFTitle : TransparentWidget {
         nvgFontFaceId(args.vg, font->handle);
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
         nvgFontSize(args.vg, 11.f);
-        nvgFillColor(args.vg, nvgRGB(0xff, 0xff, 0xff));
+        nvgFillColor(args.vg, oled::tRGB(0xff, 0xff, 0xff));
         nvgText(args.vg, 0.f, mm2px(3.5f), "SynTHBloK", NULL);
         nvgFontSize(args.vg, 10.f);
         nvgTextLetterSpacing(args.vg, 0.8f);
-        nvgFillColor(args.vg, nvgRGB(0xff, 0x7a, 0x00));
+        nvgFillColor(args.vg, oled::tRGB(0xff, 0x7a, 0x00));
         nvgText(args.vg, 0.f, mm2px(6.4f), "GRAIN-FORGE", NULL);
     }
 };
@@ -665,13 +683,13 @@ struct GFRing : TransparentWidget {
         float a0 = M_PI * 0.75f, a1 = M_PI * 2.25f;
         nvgBeginPath(args.vg);
         nvgArc(args.vg, cx, cy, rr, a0, a1, NVG_CW);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 40));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 40));
         nvgStrokeWidth(args.vg, 1.8f);
         nvgStroke(args.vg);
         if (v > 0.001f) {
             nvgBeginPath(args.vg);
             nvgArc(args.vg, cx, cy, rr, a0, a0 + (a1 - a0) * v, NVG_CW);
-            nvgStrokeColor(args.vg, nvgRGBA(255, 112, 15, 235));
+            nvgStrokeColor(args.vg, oled::tRGBA(255, 112, 15, 235));
             nvgStrokeWidth(args.vg, 1.8f);
             nvgStroke(args.vg);
         }
@@ -690,23 +708,23 @@ struct GFStageDisplay : TransparentWidget {
         bool lit = !module || module->on(onParam);
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, W, H, 2.f);
-        nvgFillColor(args.vg, nvgRGBA(14, 9, 3, 255));
+        nvgFillColor(args.vg, oled::tRGBA(14, 9, 3, 255));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, lit ? 1.f : 0.8f);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, lit ? 160 : 60));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, lit ? 160 : 60));
         nvgStroke(args.vg);
         auto font = uiFont(); if (!font) return;
         nvgFontFaceId(args.vg, font->handle);
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgFontSize(args.vg, 7.5f);
-        nvgFillColor(args.vg, nvgRGBA(255, 190, 90, lit ? 220 : 90));
+        nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, lit ? 220 : 90));
         nvgText(args.vg, 5.f, H * 0.3f, title, NULL);
         nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgFillColor(args.vg, lit ? nvgRGBA(120, 230, 90, 255) : nvgRGBA(255, 190, 90, 90));
+        nvgFillColor(args.vg, lit ? oled::tRGBA(120, 230, 90, 255) : oled::tRGBA(255, 190, 90, 90));
         nvgText(args.vg, W - 5.f, H * 0.3f, lit ? "ON" : "OFF", NULL);
         nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgFontSize(args.vg, 9.5f);
-        nvgFillColor(args.vg, nvgRGBA(255, 190, 90, lit ? 255 : 90));
+        nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, lit ? 255 : 90));
         std::string s = status ? status() : "";
         nvgText(args.vg, 5.f, H * 0.7f, s.c_str(), NULL);
     }
@@ -729,16 +747,16 @@ struct GFButton : app::ParamWidget {
         bool now = gf && playIdx >= 0 && gf->step == playIdx;
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, box.size.x, box.size.y, 1.2f);
-        nvgFillColor(args.vg, lit ? nvgRGBA(255, 112, 15, 235) : nvgRGBA(40, 25, 8, 255));
+        nvgFillColor(args.vg, lit ? oled::tRGBA(255, 112, 15, 235) : oled::tRGBA(40, 25, 8, 255));
         nvgFill(args.vg);
-        nvgStrokeColor(args.vg, now ? nvgRGB(0xff, 0xff, 0xff) : nvgRGBA(255, 180, 90, lit ? 255 : 120));
+        nvgStrokeColor(args.vg, now ? oled::tRGB(0xff, 0xff, 0xff) : oled::tRGBA(255, 180, 90, lit ? 255 : 120));
         nvgStrokeWidth(args.vg, now ? 1.2f : 0.8f);
         nvgStroke(args.vg);
         auto font = uiFont(); if (!font || !label[0]) return;
         nvgFontFaceId(args.vg, font->handle);
         nvgFontSize(args.vg, 7.f);
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgFillColor(args.vg, lit ? nvgRGBA(20, 10, 2, 255) : nvgRGBA(255, 190, 90, 255));
+        nvgFillColor(args.vg, lit ? oled::tRGBA(20, 10, 2, 255) : oled::tRGBA(255, 190, 90, 255));
         nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, label, NULL);
     }
     void onButton(const ButtonEvent& e) override {
@@ -771,16 +789,16 @@ struct GFThrowRoll : OpaqueWidget {
     void draw(const DrawArgs& args) override {
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, box.size.x, box.size.y, 1.f);
-        nvgFillColor(args.vg, flash > 0.f ? nvgRGBA(255, 112, 15, (int)(235 * flash)) : nvgRGBA(40, 25, 8, 255));
+        nvgFillColor(args.vg, flash > 0.f ? oled::tRGBA(255, 112, 15, (int)(235 * flash)) : oled::tRGBA(40, 25, 8, 255));
         nvgFill(args.vg);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 160));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 160));
         nvgStrokeWidth(args.vg, 0.7f);
         nvgStroke(args.vg);
         auto font = uiFont(); if (!font) return;
         nvgFontFaceId(args.vg, font->handle);
         nvgFontSize(args.vg, 5.5f);
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgFillColor(args.vg, flash > 0.5f ? nvgRGBA(20, 10, 2, 255) : nvgRGBA(255, 190, 90, 255));
+        nvgFillColor(args.vg, flash > 0.5f ? oled::tRGBA(20, 10, 2, 255) : oled::tRGBA(255, 190, 90, 255));
         nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, "RND", NULL);
         flash = std::max(0.f, flash - 0.08f);
     }
@@ -809,16 +827,16 @@ struct GFModeButton : app::ParamWidget {
             nvgBeginPath(args.vg);
             if (vertical) nvgRoundedRect(args.vg, 0.f, y0 + 0.5f, w, h - 1.f, 1.2f);
             else nvgRoundedRect(args.vg, x0 + 0.5f, 0.f, w - 1.f, h, 1.2f);
-            nvgFillColor(args.vg, lit ? nvgRGBA(255, 112, 15, 235) : nvgRGBA(40, 25, 8, 255));
+            nvgFillColor(args.vg, lit ? oled::tRGBA(255, 112, 15, 235) : oled::tRGBA(40, 25, 8, 255));
             nvgFill(args.vg);
-            nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, lit ? 255 : 120));
+            nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, lit ? 255 : 120));
             nvgStrokeWidth(args.vg, 0.8f);
             nvgStroke(args.vg);
             if (!font) continue;
             nvgFontFaceId(args.vg, font->handle);
             nvgFontSize(args.vg, 7.f);
             nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            nvgFillColor(args.vg, lit ? nvgRGBA(20, 10, 2, 255) : nvgRGBA(255, 190, 90, 255));
+            nvgFillColor(args.vg, lit ? oled::tRGBA(20, 10, 2, 255) : oled::tRGBA(255, 190, 90, 255));
             nvgText(args.vg, x0 + w * 0.5f, y0 + h * 0.5f, names[i], NULL);
         }
     }
@@ -843,10 +861,10 @@ struct GFStatus : TransparentWidget {
         float W = box.size.x, H = box.size.y;
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, W, H, 2.f);
-        nvgFillColor(args.vg, nvgRGBA(14, 9, 3, 255));
+        nvgFillColor(args.vg, oled::tRGBA(14, 9, 3, 255));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, 0.8f);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 80));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 80));
         nvgStroke(args.vg);
         auto font = uiFont(); if (!font) return;
         nvgFontFaceId(args.vg, font->handle);
@@ -859,10 +877,10 @@ struct GFStatus : TransparentWidget {
         }
         nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgFontSize(args.vg, 9.f);
-        nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 255));
+        nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 255));
         nvgText(args.vg, W * 0.5f, H * 0.34f, bpm, NULL);
         nvgFontSize(args.vg, 7.5f);
-        nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 130));
+        nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 130));
         nvgText(args.vg, W * 0.5f, H * 0.7f, sub, NULL);
     }
 
@@ -876,13 +894,13 @@ struct GFStatus : TransparentWidget {
         for (int i = 0; i < 2; i++) {
             float y = H * (i ? 0.56f : 0.2f);
             nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 255));
+            nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 255));
             nvgText(args.vg, lx, y + bh * 0.5f, nm[i], NULL);
             bar(args, bx, y, bw, bh, lv[i], peak[i]);
             float db = toDb(lv[i]);
             if (db < -60.f) snprintf(buf, sizeof buf, "-inf"); else snprintf(buf, sizeof buf, "%.1f", db);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgFillColor(args.vg, db > -1.f ? nvgRGBA(255, 50, 40, 255) : nvgRGBA(255, 190, 90, 255));
+            nvgFillColor(args.vg, db > -1.f ? oled::tRGBA(255, 50, 40, 255) : oled::tRGBA(255, 190, 90, 255));
             nvgText(args.vg, vx, y + bh * 0.5f, buf, NULL);
         }
     }
@@ -904,10 +922,10 @@ struct GFStatus : TransparentWidget {
             bool lit = segPos <= pos + 1e-4f;
             bool pkSeg = (int)std::ceil(ppos * N) == i + 1;
             NVGcolor c;
-            if (segDb > -1.f)      c = nvgRGBA(255, 40, 30, 255);
-            else if (segDb > -9.f) c = nvgRGBA(255, 112, 15, 255);
-            else                   c = nvgRGBA(255, 176, 60, 255);
-            if (!lit && !(pkSeg && ppos > 0.02f)) c = nvgRGBA(46, 29, 10, 255);
+            if (segDb > -1.f)      c = oled::tRGBA(255, 40, 30, 255);
+            else if (segDb > -9.f) c = oled::tRGBA(255, 112, 15, 255);
+            else                   c = oled::tRGBA(255, 176, 60, 255);
+            if (!lit && !(pkSeg && ppos > 0.02f)) c = oled::tRGBA(46, 29, 10, 255);
             else if (!lit) c.a = 0.5f;
             nvgBeginPath(a.vg);
             nvgRect(a.vg, x + i * sw + 0.4f, y, sw - 0.8f, h);
@@ -931,10 +949,10 @@ struct GFRndPanel : TransparentWidget {
         float W = box.size.x, H = box.size.y, w = W / 3.f;
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, W, H, 2.f);
-        nvgFillColor(args.vg, nvgRGBA(14, 9, 3, 255));
+        nvgFillColor(args.vg, oled::tRGBA(14, 9, 3, 255));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, 0.8f);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 80));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 80));
         nvgStroke(args.vg);
         int dv = module ? clamp(module->slot(G::RND_DIV_PARAM), 0, kRndDivCount - 1) : 2;
         int gl = module ? clamp(module->slot(G::RND_GLIDE_PARAM), 0, kRndGlideCount - 1) : 2;
@@ -942,14 +960,14 @@ struct GFRndPanel : TransparentWidget {
         // freeze segment lights up like the buttons
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 2.f * w + 2.f, 3.f, w - 4.f, H - 6.f, 1.5f);
-        nvgFillColor(args.vg, fz ? nvgRGBA(255, 112, 15, 235) : nvgRGBA(40, 25, 8, 255));
+        nvgFillColor(args.vg, fz ? oled::tRGBA(255, 112, 15, 235) : oled::tRGBA(40, 25, 8, 255));
         nvgFill(args.vg);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, fz ? 255 : 120));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, fz ? 255 : 120));
         nvgStroke(args.vg);
         for (int i = 1; i < 3; i++) {   // dividers
             nvgBeginPath(args.vg);
             nvgMoveTo(args.vg, i * w, 4.f); nvgLineTo(args.vg, i * w, H - 4.f);
-            nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 50));
+            nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 50));
             nvgStroke(args.vg);
         }
         auto font = uiFont(); if (!font) return;
@@ -959,14 +977,14 @@ struct GFRndPanel : TransparentWidget {
         const char* val[2] = {kRndDivName[dv], kRndGlideName[gl]};
         for (int i = 0; i < 2; i++) {
             nvgFontSize(args.vg, 7.f);
-            nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 130));
+            nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 130));
             nvgText(args.vg, i * w + w * 0.5f, H * 0.3f, top[i], NULL);
             nvgFontSize(args.vg, 9.f);
-            nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 255));
+            nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 255));
             nvgText(args.vg, i * w + w * 0.5f, H * 0.68f, val[i], NULL);
         }
         nvgFontSize(args.vg, 8.f);
-        nvgFillColor(args.vg, fz ? nvgRGBA(20, 10, 2, 255) : nvgRGBA(255, 190, 90, 255));
+        nvgFillColor(args.vg, fz ? oled::tRGBA(20, 10, 2, 255) : oled::tRGBA(255, 190, 90, 255));
         nvgText(args.vg, 2.5f * w, H * 0.5f, "FREEZE", NULL);
     }
     void stepParam(int seg, int d) {
@@ -1026,7 +1044,7 @@ struct GFPresetBar : TransparentWidget {
             nvgFill(vg);
             if (i == sel) {
                 nvgStrokeWidth(vg, 0.8f);
-                nvgStrokeColor(vg, nvgRGBA(255, 245, 225, 255));
+                nvgStrokeColor(vg, oled::tRGBA(255, 245, 225, 255));
                 nvgStroke(vg);
             }
         }
@@ -1036,10 +1054,10 @@ struct GFPresetBar : TransparentWidget {
         float W = box.size.x, H = box.size.y;
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, W, H, 2.f);
-        nvgFillColor(args.vg, nvgRGBA(14, 9, 3, 255));
+        nvgFillColor(args.vg, oled::tRGBA(14, 9, 3, 255));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, 0.8f);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 80));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 80));
         nvgStroke(args.vg);
         drawMatrix(args.vg);
         auto font = uiFont(); if (!font) return;
@@ -1097,10 +1115,10 @@ struct GFSeqScreen : TransparentWidget {
         float W = box.size.x, H = box.size.y, x0 = barX0();
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, 0.f, 0.f, W, H, 2.f);
-        nvgFillColor(args.vg, nvgRGBA(14, 9, 3, 255));
+        nvgFillColor(args.vg, oled::tRGBA(14, 9, 3, 255));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, 0.8f);
-        nvgStrokeColor(args.vg, nvgRGBA(255, 180, 90, 80));
+        nvgStrokeColor(args.vg, oled::tRGBA(255, 180, 90, 80));
         nvgStroke(args.vg);
         int trig = module ? clamp(module->slot(G::FLT_TRIG_PARAM), 0, kTrigCount - 1) : TRIG_SEQ;
         bool seqMode = trig == TRIG_SEQ;
@@ -1108,17 +1126,17 @@ struct GFSeqScreen : TransparentWidget {
         float ev = module ? clamp(module->fltEnvOut, 0.f, 1.f) : 0.f;
         nvgBeginPath(args.vg);
         nvgRect(args.vg, 2.f, H - 3.f, (x0 - 4.f) * ev, 1.5f);
-        nvgFillColor(args.vg, nvgRGBA(255, 112, 15, 220));
+        nvgFillColor(args.vg, oled::tRGBA(255, 112, 15, 220));
         nvgFill(args.vg);
         auto font = uiFont();
         if (font) {
             nvgFontFaceId(args.vg, font->handle);
             nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             nvgFontSize(args.vg, 6.f);
-            nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 130));
+            nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 130));
             nvgText(args.vg, x0 * 0.5f, H * 0.28f, "TRIG", NULL);
             nvgFontSize(args.vg, 7.5f);
-            nvgFillColor(args.vg, nvgRGBA(255, 190, 90, 255));
+            nvgFillColor(args.vg, oled::tRGBA(255, 190, 90, 255));
             nvgText(args.vg, x0 * 0.5f, H * 0.62f, kTrigName[trig], NULL);
         }
         float bw = (W - x0 - 2.f) / G::kSeqMax;
@@ -1130,13 +1148,13 @@ struct GFSeqScreen : TransparentWidget {
             int a = i >= len ? 40 : seqMode ? 255 : 110;   // dim when SEQ isn't the trigger, dimmer past LENGTH
             nvgBeginPath(args.vg);
             nvgRect(args.vg, bx, H - 1.5f - bh, bw - 1.2f, bh);
-            if (on) nvgFillColor(args.vg, i == pos && seqMode ? nvgRGBA(255, 240, 200, a) : nvgRGBA(255, 112, 15, a * 9 / 10));
-            else nvgFillColor(args.vg, nvgRGBA(255, 180, 90, a / 5));
+            if (on) nvgFillColor(args.vg, i == pos && seqMode ? oled::tRGBA(255, 240, 200, a) : oled::tRGBA(255, 112, 15, a * 9 / 10));
+            else nvgFillColor(args.vg, oled::tRGBA(255, 180, 90, a / 5));
             nvgFill(args.vg);
             if (i % 4 == 0) {   // beat ticks
                 nvgBeginPath(args.vg);
                 nvgRect(args.vg, bx, H - 1.2f, bw - 1.2f, 0.6f);
-                nvgFillColor(args.vg, nvgRGBA(255, 180, 90, 90));
+                nvgFillColor(args.vg, oled::tRGBA(255, 180, 90, 90));
                 nvgFill(args.vg);
             }
         }
@@ -1260,7 +1278,11 @@ static void gfAddPanel(ModuleWidget* mw, SynTHBloKGrainForge* module, float dx, 
     });
     knob(c - 13.f, 29.f, G::DL_TIME_PARAM, "TIME");  knob(c, 29.f, G::DL_FDBK_PARAM, "FDBK");   knob(c + 13.f, 29.f, G::DL_WARP_PARAM, "WARP");
     knob(c - 13.f, 44.f, G::DL_ROUTE_PARAM, "ROUTE"); knob(c, 44.f, G::DL_TONE_PARAM, "TONE");  knob(c + 13.f, 44.f, G::DL_MIX_PARAM, "ECHO");
-    label(c, 56.f, "THROW STEPS");
+    {   // FONTS Nov 26: section header 1.22x bold #ececec (same box / position as label(c, 56.f, ...))
+        GFLabel* l = createWidget<GFLabel>(at(c - 10.f, 56.f - 2.f));
+        l->box.size = mm2px(Vec(20.f, 4.f)); l->text = "THROW STEPS"; l->header = true;
+        mw->addChild(l);
+    }
     GFThrowRoll* roll = createWidget<GFThrowRoll>(at(c + 12.f, 54.4f));   // right edge = throw grid's
     roll->box.size = mm2px(Vec(5.8f, 3.2f)); roll->module = module;
     mw->addChild(roll);
