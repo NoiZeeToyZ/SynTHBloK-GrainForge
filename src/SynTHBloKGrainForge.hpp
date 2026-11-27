@@ -641,6 +641,7 @@ static std::shared_ptr<window::Font> uiFont() { return APP->window->uiFont; }
 struct GFLabel : TransparentWidget {
     std::string text;
     float size = 7.f;
+    bool white = false;    // (Nov 26 2026, Nick: GRAIN-FORGE labels white like the other free panels; FORGE FX in the paid modules keeps grey)
     bool header = false;   // FONTS Nov 26: section header 1.22x bold #ececec (false = unchanged look)
     void draw(const DrawArgs& args) override {
         auto font = uiFont(); if (!font) return;
@@ -652,7 +653,7 @@ struct GFLabel : TransparentWidget {
             drawSectionHeader(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, text.c_str(), size);
             return;
         }
-        nvgFillColor(args.vg, oled::tRGB(0xbb, 0xbb, 0xbb));
+        nvgFillColor(args.vg, white ? oled::tRGB(0xff, 0xff, 0xff) : oled::tRGB(0xbb, 0xbb, 0xbb));
         nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, text.c_str(), NULL);
     }
 };
@@ -1209,7 +1210,7 @@ static void gfAddPanel(ModuleWidget* mw, SynTHBloKGrainForge* module, float dx, 
     auto at = [&](float x, float y) { return mm2px(Vec(x + dx, y)); };
     auto label = [&](float cx, float cy, const std::string& text) {
         GFLabel* l = createWidget<GFLabel>(at(cx - 10.f, cy - 2.f));
-        l->box.size = mm2px(Vec(20.f, 4.f)); l->text = text;
+        l->box.size = mm2px(Vec(20.f, 4.f)); l->text = text; l->white = true;   // white labels (Nov 26)
         mw->addChild(l);
     };
     auto knob = [&](float x, float y, int param, const char* name) {
@@ -1351,8 +1352,10 @@ static void gfAddPanel(ModuleWidget* mw, SynTHBloKGrainForge* module, float dx, 
 
     if (!jacks) return;
     const char* jn[9] = {"IN L", "IN R", "CLOCK", "RESET", "OPEN", "GLITCH", "GATE", "OUT L", "OUT R"};
+    // (Nick, Nov 26 2026: audio ins and audio outs squeezed into pairs; the 5 control jacks evenly between them)
+    const float jx[9] = {12.f, 24.f, 46.f, 73.75f, 101.5f, 129.25f, 157.f, 179.2f, 191.2f};
     for (int i = 0; i < 9; i++) {
-        float x = 12.f + i * 22.4f;
+        float x = jx[i];
         label(x, 106.f, jn[i]);
         Vec p = at(x, 113.f);
         if (i < 7) mw->addInput(createInputCentered<BlackJack>(p, module, i));
